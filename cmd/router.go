@@ -10,6 +10,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/liushuochen/gotable"
 	"github.com/spf13/viper"
 )
 
@@ -18,11 +19,7 @@ func setRouters(e *echo.Echo) {
 	e.POST("mqtt/publish", controller.MqttController.Publish)
 	agroup := e.Group("/auth")
 	agroup.POST("/session-key", controller.AuthController.GetSessionKey)
-	routers, err := json.MarshalIndent(e.Routes(), "", "  ")
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(string(routers))
+	readerRoutesTable(e)
 }
 
 type ErrResp struct {
@@ -82,4 +79,25 @@ func recoverF(c echo.Context, err error, stack []byte) error {
 	c.Logger().Error(msg)
 	help.PanicLog(msg)
 	return err
+}
+
+type routerStruct struct {
+	Method string `json:"method"`
+	Path   string `json:"path"`
+	Name   string `json:"name"`
+}
+
+func readerRoutesTable(e *echo.Echo) {
+	routers, err := json.MarshalIndent(e.Routes(), "", "  ")
+	if err != nil {
+		fmt.Println(err)
+	}
+	var routerList []routerStruct
+	json.Unmarshal(routers, &routerList)
+	fmt.Println("routers: ")
+	table, _ := gotable.Create("method", "path", "controller")
+	for _, v := range routerList {
+		table.AddRow([]string{v.Method, v.Path, v.Name})
+	}
+	fmt.Println(table)
 }
